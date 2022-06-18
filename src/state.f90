@@ -2,6 +2,9 @@
     use hall_mod
     use room_mod
     implicit none
+    private
+    public state_t, find_best
+
     type state_t
       type(hall_t) :: hall
       type(room_t) :: room(4)
@@ -15,7 +18,7 @@
     integer, parameter :: ROOM_MET(*) = [2,4,6,8]
     integer, parameter :: HALL_MET(*) = [0,1,3,5,7,9,10]
 
-integer, save :: best_result = huge(best_result), count_calls = 0
+integer, save, public :: count_calls = 0
 
   contains
 
@@ -44,7 +47,7 @@ integer, save :: best_result = huge(best_result), count_calls = 0
 
 
 
-    subroutine move_direct(this, ifrom, valid, cost)
+    pure subroutine move_direct(this, ifrom, valid, cost)
       class(state_t), intent(inout) :: this
       integer, intent(in) :: ifrom
       logical, intent(out) :: valid
@@ -70,7 +73,6 @@ integer, save :: best_result = huge(best_result), count_calls = 0
       valid = .true.
       call this % room(ifrom) % pop(item, steps1)
       call this % room(ito) % push(item, steps2)
-      !steps3 = 2*abs(ifrom-ito)
       steps3 = abs(ROOM_MET(ifrom)-ROOM_MET(ito))
       cost = (steps1+steps2+steps3)*(10**(item-1))
 
@@ -79,7 +81,7 @@ integer, save :: best_result = huge(best_result), count_calls = 0
 
 
 
-    subroutine move_to_hall(this, ifrom, ito, valid, cost)
+    pure subroutine move_to_hall(this, ifrom, ito, valid, cost)
       class(state_t), intent(inout) :: this
       integer, intent(in) :: ifrom, ito
       logical, intent(out) :: valid
@@ -110,7 +112,7 @@ integer, save :: best_result = huge(best_result), count_calls = 0
 
 
 
-    subroutine move_from_hall(this, ifrom, valid, cost)
+    pure subroutine move_from_hall(this, ifrom, valid, cost)
       class(state_t), intent(inout) :: this
       integer, intent(in) :: ifrom
       logical, intent(out) :: valid
@@ -152,13 +154,11 @@ integer, save :: best_result = huge(best_result), count_calls = 0
 
       character(len=HALL_SIZE) :: hall
       character(len=ROOM_SIZE) :: rooms(4)
-
       integer :: i, j
 
       do i=1,HALL_SIZE
         hall(i:i) = ch(this%hall%items(i))
       end do
-
       do j=1,4
       do i=1,ROOM_SIZE
         rooms(j)(i:i) = ch(this%room(j)%items(i))
@@ -173,7 +173,7 @@ integer, save :: best_result = huge(best_result), count_calls = 0
       end do
       print *
     contains
-      function ch(i)
+      pure function ch(i)
         character(len=1) :: ch
         integer, intent(in) :: i
 
@@ -184,12 +184,11 @@ integer, save :: best_result = huge(best_result), count_calls = 0
           ch = achar(i+64)
         end if
       end function
-
     end subroutine state_print
 
 
 
-    logical function state_issolved(this)
+    pure logical function state_issolved(this)
       class(state_t), intent(in) :: this
       logical :: isdone(4), isfull(4)
       integer :: i
@@ -203,22 +202,22 @@ integer, save :: best_result = huge(best_result), count_calls = 0
 
 
 
-
-
-    recursive subroutine find_best(state,lev,cost)
+    recursive subroutine find_best(state,lev,cost,sol)
       type(state_t), intent(in) :: state
       integer, intent(in) :: lev
-      type(state_t)  :: wrkstate, state0
       integer, intent(out) :: cost
+      type(state_t), intent(out), allocatable :: sol(:)
 
-      integer :: i, j, bestcost,wrkcost,newcost,cost0
+      type(state_t) :: wrkstate, state0
+      type(state_t), allocatable :: newsol(:), bestsol(:)
+      integer :: i, j, bestcost,wrkcost,newcost
       logical :: res, changed
 
  count_calls = count_calls + 1
-
       
-      cost0 = 0
+      cost = 0
       state0 = state
+      allocate(sol(0))
 
       ! try all optimal moves
       do
@@ -228,7 +227,8 @@ integer, save :: best_result = huge(best_result), count_calls = 0
         do i=1,HALL_SIZE
           call state0 % move_from_hall(i,res,wrkcost)
           if (.not. res) cycle ! ignore invalid moves
-          cost0 = cost0 + wrkcost
+          cost = cost + wrkcost
+          sol = [sol, state0]
           changed = .true.
         end do
 
@@ -236,25 +236,23 @@ integer, save :: best_result = huge(best_result), count_calls = 0
         do i=1,4
           call state0 % move_direct(i,res,wrkcost)
           if (.not. res) cycle ! ignore invalid moves
-          cost0 = cost0 + wrkcost
+          cost = cost + wrkcost
+          sol = [sol, state0]
           changed = .true.
         end do
 
         if (.not. changed) exit
       end do
 
+      ! if solved - return
       if (state0 % issolved()) then
-        ! if state is final - return
- if (cost0 < best_result) then
-   print *, 'targetfound', cost0, lev
-   best_result = cost0
- endif
-        cost = cost0
+        !cost = cost0
         return
       end if
       
       ! test moving to hallway
       bestcost = huge(bestcost)/2
+      allocate(bestsol(0))
       do i=1,4
         if (state0 % room(i) % isdone()) cycle
         do j=1,HALL_SIZE
@@ -263,16 +261,17 @@ integer, save :: best_result = huge(best_result), count_calls = 0
           if (.not. res) cycle ! ignore invalid moves
 
           ! recursively explore all other moves
-          call find_best(wrkstate,lev+1,newcost)
+          call find_best(wrkstate,lev+1,newcost,newsol)
 
           ! keep track of the best solution so far
-          if (bestcost > newcost + cost0 + wrkcost) then
-            bestcost = cost0 + wrkcost + newcost
+          if (bestcost > newcost + cost + wrkcost) then
+            bestcost = cost + wrkcost + newcost
+            bestsol = [sol, wrkstate, newsol]
           end if
         end do
       end do
       cost = bestcost
+      sol = bestsol
     end subroutine
-
 
   end module state_mod

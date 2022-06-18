@@ -1,5 +1,7 @@
   module room_mod
     implicit none
+    private
+    public room_t, ROOM_SIZE
 
     !integer, parameter :: ROOM_SIZE = 2
     integer, parameter :: ROOM_SIZE = 4
@@ -23,7 +25,7 @@
 
   contains
 
-    function room_init(arr,id) result(this)
+    pure function room_init(arr,id) result(this)
       integer, intent(in) :: arr(:)
       integer, intent(in) :: id
       type(room_t) :: this
@@ -73,7 +75,7 @@
 
 
 
-    subroutine push(this, item, steps)
+    pure subroutine push(this, item, steps)
       class(room_t), intent(inout) :: this
       integer, intent(in) :: item
       integer, intent(out) :: steps
@@ -86,7 +88,7 @@
 
 
 
-    subroutine pop(this, item, steps)
+    pure subroutine pop(this, item, steps)
       class(room_t), intent(inout) :: this
       integer, intent(out) :: item, steps
 

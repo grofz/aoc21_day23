@@ -1,8 +1,10 @@
   program test_room
     use state_mod
+    use room_mod, only : room_t
     implicit none
 
     type(state_t) :: ST
+    type(state_t), allocatable :: sol(:)
     integer :: item, i0, i1, tot, cost
     character(len=2) arr
     logical :: isvalid
@@ -63,9 +65,15 @@
     end do
 
     100 continue
-    call find_best(ST, 0, tot)
-    print *, 'tot = ',tot, count_calls
-    print *, tot==46721 .or. tot==44169 .or. tot==10411 .or. tot==12521
+    call find_best(ST, 0, tot, sol)
+    do i0=1,size(sol)
+      call sol(i0) % print()
+    enddo
+    print '("Total cost = ",i0,"  Sub called = ",i0)', tot, count_calls
+    print '("Moves = ",i0)', size(sol)
+    print '("Correct answer? ",l1)', &
+    &   tot==46721 .or. tot==44169 .or. tot==10411 .or. tot==12521
+
       
 
   end program

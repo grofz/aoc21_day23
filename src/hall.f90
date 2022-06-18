@@ -1,5 +1,7 @@
   module hall_mod
     implicit none
+    private
+    public hall_t, HALL_SIZE
 
     real, parameter :: ENTR(*) = [2.5, 3.5, 4.5, 5.5]
     integer, parameter :: HALL_SIZE = 7
@@ -13,7 +15,7 @@
 
   contains
 
-    logical function able_through(this,room_src,room_dst)
+    pure logical function able_through(this,room_src,room_dst)
       class(hall_t), intent(in) :: this
       integer, intent(in) :: room_src, room_dst
       real :: s1, s2
@@ -22,7 +24,7 @@
       able_through = is_free_path(this%items,s1,s2)
     end function
 
-    logical function able_to(this,room_src,dst)
+    pure logical function able_to(this,room_src,dst)
       class(hall_t), intent(in) :: this
       integer, intent(in) :: room_src, dst
       real :: s1, s2
@@ -31,7 +33,7 @@
       able_to = is_free_path(this%items,s1,s2)
     end function
 
-    logical function able_from(this,src,room_dst)
+    pure logical function able_from(this,src,room_dst)
       class(hall_t), intent(in) :: this
       integer, intent(in) :: room_dst, src
       real :: s1, s2
@@ -40,7 +42,7 @@
       able_from = is_free_path(this%items,s1,s2)
     end function
 
-    logical function is_free_path(hall, s1, s2)
+    pure logical function is_free_path(hall, s1, s2)
       integer, intent(in) :: hall(:)
       real, intent(in) :: s1, s2
       integer :: lef, rig
