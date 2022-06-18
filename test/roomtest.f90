@@ -74,6 +74,4 @@
     print '("Correct answer? ",l1)', &
     &   tot==46721 .or. tot==44169 .or. tot==10411 .or. tot==12521
 
-      
-
   end program
